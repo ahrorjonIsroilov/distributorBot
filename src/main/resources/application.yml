@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    password: 123
+    username: postgres
+    url: jdbc:postgresql://localhost:5432/distributor
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        enable_lazy_load_no_trans: true
+        format_sql: true
+  elasticsearch:
+    socket-timeout: 30000
+logging:
+  file:
+    name: logback
