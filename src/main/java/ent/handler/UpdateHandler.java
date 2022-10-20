@@ -37,7 +37,7 @@ public class UpdateHandler implements IBaseHandler {
         ExecutorService pool = Executors.newFixedThreadPool(4);
         Runnable runnable = (() -> {
             AuthUser user = messageHandler.service.getByChatId(update.getMessage().getChatId());
-            if (!Objects.equals(user.getUsername(), update.getMessage().getFrom().getUserName())) {
+            if (!Objects.equals(user.getUsername(), update.getMessage().getFrom().getUserName()) && user.getRegistered()) {
                 user.setUsername(update.getMessage().getFrom().getUserName());
                 messageHandler.service.save(user);
             }

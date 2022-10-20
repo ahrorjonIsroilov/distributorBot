@@ -26,16 +26,13 @@ public interface AuthRepo extends BaseRepo, JpaRepository<AuthUser, Long> {
 
     @Transactional
     @Modifying
-    @Query(value = "update AuthUser set registered =:status where chatId =:chatId")
-    void registerUser(@Param("chatId") Long chatId, @Param("status") Boolean status);
-
-    @Transactional
-    @Modifying
     @Query("update AuthUser set blocked=:status where id=:id")
     void setUserBlockedStatus(
             @Param("id") Long id,
             @Param("status") Boolean status);
 
+
+    Boolean existsByUsernameAndRegisteredFalse(String username);
 
     Boolean existsByUsername(String username);
 
@@ -43,7 +40,9 @@ public interface AuthRepo extends BaseRepo, JpaRepository<AuthUser, Long> {
 
     Boolean existsByChatIdAndRegisteredTrue(Long chatId);
 
-    List<AuthUser> findAllByRoleAndRegisteredTrue(Role role, Pageable pageable);
+    Boolean existsByChatIdAndRegisteredFalse(Long chatId);
 
     List<AuthUser> findAllByRole(Role role, Pageable pageable);
+
+    List<AuthUser> findAllByRole(Role role);
 }

@@ -5,6 +5,7 @@ import ent.enums.State;
 import ent.service.Service;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
@@ -37,9 +38,36 @@ public class Session {
         return null;
     }
 
+    public Role getRole(Long chatId) {
+        if (Objects.nonNull(sessions.get(chatId))) {
+            Optional<SessionUser> sessionUser = sessions.get(chatId);
+            if (sessionUser.isPresent())
+                return sessionUser.get().getRole();
+        }
+        return null;
+    }
+
+    public Integer getPage(Long chatId) {
+        if (Objects.nonNull(sessions.get(chatId))) {
+            Optional<SessionUser> sessionUser = sessions.get(chatId);
+            if (sessionUser.isPresent())
+                return sessionUser.get().getPage();
+        }
+        return null;
+    }
+
+    public LocalDateTime getDay(Long chatId) {
+        if (Objects.nonNull(sessions.get(chatId))) {
+            Optional<SessionUser> sessionUser = sessions.get(chatId);
+            if (sessionUser.isPresent())
+                return sessionUser.get().getDate();
+        }
+        return null;
+    }
+
     public Boolean checkState(State state, Long chatId) {
         Optional<SessionUser> session = findByChatId(chatId);
-        return session.map(sessionUser -> sessionUser.getState().equals(state.getCode())).orElse(false);
+        return session.map(sessionUser -> sessionUser.getState().equals(state)).orElse(false);
     }
 
     public void setSession(Long chatId) {
@@ -53,16 +81,25 @@ public class Session {
 
     public Optional<SessionUser> prepare(AuthUser user) {
         return Optional.of(SessionUser.builder()
-                .state(State.DEFAULT.getCode())
+                .state(State.DEFAULT)
+                .blocked(user.getBlocked())
                 .chatId(user.getChatId())
                 .page(user.getPage())
                 .role(user.getRole()).build());
     }
 
+    public Boolean isBlocked(Long chatId) {
+        Optional<SessionUser> session = findByChatId(chatId);
+        if (session.isPresent()) {
+            return session.get().getBlocked();
+        }
+        return false;
+    }
+
     public void setState(State state, Long chatId) {
         Optional<SessionUser> session = findByChatId(chatId);
         if (session.isPresent()) {
-            session.get().setState(state.getCode());
+            session.get().setState(state);
             setSession(chatId, session);
         }
     }
@@ -71,6 +108,14 @@ public class Session {
         Role[] clone = role.clone();
         Optional<SessionUser> user = sessions.get(chatId);
         return Arrays.stream(clone).anyMatch(r -> user.map(u -> u.getRole().equals(r)).orElse(false));
+    }
+
+    public void setDate(LocalDateTime date, Long chatId) {
+        Optional<SessionUser> session = findByChatId(chatId);
+        if (session.isPresent()) {
+            session.get().setDate(date);
+            setSession(chatId, session);
+        }
     }
 
     public void setTempVal(Long tempVal, Long chatId) {
@@ -87,6 +132,18 @@ public class Session {
             session.get().setTempString(tempVal);
             setSession(chatId, session);
         }
+    }
+
+    public String getTempString(Long chatId) {
+        Optional<SessionUser> session = findByChatId(chatId);
+        if (session.isPresent()) return session.get().getTempString();
+        return "";
+    }
+
+    public Long getTempLong(Long chatId) {
+        Optional<SessionUser> session = findByChatId(chatId);
+        if (session.isPresent()) return session.get().getTempLong();
+        return 0L;
     }
 
     public void removeSession(Long chatId) {

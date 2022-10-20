@@ -1,7 +1,12 @@
 spring:
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: always
   datasource:
-    password: 123
-    username: postgres
+    password: ...
+    username: ahrorjon
     url: jdbc:postgresql://localhost:5432/distributor
     driver-class-name: org.postgresql.Driver
   jpa:
@@ -12,8 +17,6 @@ spring:
       hibernate:
         enable_lazy_load_no_trans: true
         format_sql: true
-  elasticsearch:
-    socket-timeout: 30000
 logging:
   file:
     name: logback

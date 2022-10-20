@@ -19,7 +19,7 @@ import javax.persistence.*;
 public class AuthUser extends Auditable implements BaseEntity {
     @Column(name = "chat_id", unique = true)
     private Long chatId;
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String username;
     @Column(name = "full_name")
     private String fullName;

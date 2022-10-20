@@ -16,6 +16,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
 
 import static java.lang.Math.toIntExact;
 
@@ -74,19 +75,15 @@ public class BaseMethods {
     public EditMessageText eMsgObject(Update update, InlineKeyboardMarkup markup, String text) {
         long messageId;
         long chatId;
-        List<MessageEntity> entities;
         if (update.hasCallbackQuery()) {
             chatId = update.getCallbackQuery().getMessage().getChatId();
             messageId = update.getCallbackQuery().getMessage().getMessageId();
-            entities = update.getCallbackQuery().getMessage().getEntities();
         } else {
             chatId = update.getMessage().getChatId();
             messageId = update.getMessage().getMessageId();
-            entities = update.getMessage().getEntities();
         }
         EditMessageText ed = new EditMessageText();
         ed.setText(text);
-        //ed.setEntities(entities);
         ed.setMessageId(toIntExact(messageId));
         ed.setChatId(chatId);
         ed.enableHtml(true);
@@ -97,19 +94,15 @@ public class BaseMethods {
     public EditMessageText eMsgObject(Update update, String text) {
         long messageId;
         long chatId;
-        List<MessageEntity> entities;
         if (update.hasCallbackQuery()) {
             chatId = update.getCallbackQuery().getMessage().getChatId();
             messageId = update.getCallbackQuery().getMessage().getMessageId();
-            entities = update.getCallbackQuery().getMessage().getEntities();
         } else {
             chatId = update.getMessage().getChatId();
             messageId = update.getMessage().getMessageId();
-            entities = update.getMessage().getEntities();
         }
         EditMessageText ed = new EditMessageText();
         ed.setText(text);
-        ed.setEntities(entities);
         ed.setMessageId(toIntExact(messageId));
         ed.setChatId(chatId);
         ed.enableHtml(true);
@@ -146,6 +139,30 @@ public class BaseMethods {
         SendMessage sendMessage = msgObject(chatId, text);
         sendMessage.setReplyMarkup(markup);
         bot.executeMessage(sendMessage);
+    }
+
+    protected boolean messageHasText(Update update) {
+        return update.getMessage().hasText();
+    }
+
+    protected final Boolean validDocument(Document document) {
+        return document.getFileName().endsWith(".xls") || document.getFileName().endsWith(".xlsx");
+    }
+
+    protected boolean messageHasDocument(Update update) {
+        if (message.hasDocument()) {
+            Document d = message.getDocument();
+            return validDocument(d);
+        }
+        return false;
+    }
+
+    protected boolean messageTextEquals(Update update, String text) {
+        return update.getMessage().hasText() && update.getMessage().getText().equals(text);
+    }
+
+    protected boolean hasUsername(Update update) {
+        return Objects.nonNull(update.getMessage().getFrom().getUserName());
     }
 
     public String beautyPhone(String phoneNumber) {

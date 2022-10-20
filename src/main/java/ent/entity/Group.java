@@ -1,6 +1,5 @@
 package ent.entity;
 
-import ent.entity.Auditable;
 import lombok.*;
 
 import javax.persistence.Column;

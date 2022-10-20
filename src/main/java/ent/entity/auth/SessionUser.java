@@ -1,7 +1,10 @@
 package ent.entity.auth;
 
 import ent.enums.Role;
+import ent.enums.State;
 import lombok.*;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -11,8 +14,10 @@ import lombok.*;
 public class SessionUser {
     private Long chatId;
     private Role role;
-    private String state;
+    private Boolean blocked;
+    private State state;
     private Integer page;
     private String tempString;
+    private LocalDateTime date;
     private Long tempLong;
 }

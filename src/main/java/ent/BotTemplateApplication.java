@@ -2,6 +2,7 @@ package ent;
 
 import ent.config.BotRunner;
 import ent.entity.auth.AuthUser;
+import ent.enums.Role;
 import ent.enums.State;
 import ent.service.Service;
 import lombok.RequiredArgsConstructor;
@@ -28,14 +29,28 @@ public class BotTemplateApplication implements CommandLineRunner {
 
     private void migrate() {
         AuthUser authUser = AuthUser.builder()
-                .chatId(1055174667L)
+                .chatId(1992137199L)
                 .username("akhdeo")
                 .fullName("Ahrorjon")
                 .phoneNumber("998903061599")
+                .blocked(false)
                 .registered(true)
                 .page(0)
+                .role(Role.OWNER)
+                .state(State.DEFAULT)
+                .build();
+        AuthUser dist = AuthUser.builder()
+                .chatId(1055174667L)
+                .username("ahrorjon")
+                .fullName("Ahrorjon")
+                .phoneNumber("998905351483")
+                .blocked(false)
+                .registered(true)
+                .page(0)
+                .role(Role.DISTRIBUTOR)
                 .state(State.DEFAULT)
                 .build();
         service.save(authUser);
+        service.save(dist);
     }
 }

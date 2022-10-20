@@ -1,7 +1,6 @@
 package ent.button;
 
 
-import ent.enums.Emojis;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
@@ -27,7 +26,7 @@ public class MarkupBoards {
     }
 
     public ReplyKeyboardMarkup storekeeperPanel() {
-        KeyboardButton doChange = new KeyboardButton("O'zgarish bor " + Emojis.INTERROBANG.emoji());
+        KeyboardButton doChange = new KeyboardButton("O'zgarish bor ⁉️");
         KeyboardRow row = new KeyboardRow();
         row.add(doChange);
         board.setKeyboard(Collections.singletonList(row));
@@ -58,13 +57,16 @@ public class MarkupBoards {
 
     public ReplyKeyboardMarkup adminPanel() {
         KeyboardButton groups = new KeyboardButton("Guruhlar 👥");
-        KeyboardButton products = new KeyboardButton("Mahsulotlar 👥");
+        KeyboardButton history = new KeyboardButton("Tarix 📁");
         KeyboardButton distributors = new KeyboardButton("Taqsimotchilar 🧢");
+        KeyboardButton addTable = new KeyboardButton("Jadvalni yuklash 📝");
         KeyboardRow row1 = new KeyboardRow();
         KeyboardRow row2 = new KeyboardRow();
-        row1.addAll(List.of(groups, products));
-        row2.add(distributors);
-        board.setKeyboard(List.of(row1, row2));
+        KeyboardRow row3 = new KeyboardRow();
+        row1.addAll(List.of(groups, distributors));
+        row2.add(addTable);
+        row3.add(history);
+        board.setKeyboard(List.of(row1, row2, row3));
         board.setResizeKeyboard(true);
         board.setSelective(true);
         return board;

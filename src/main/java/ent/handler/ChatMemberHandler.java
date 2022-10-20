@@ -30,7 +30,7 @@ public class ChatMemberHandler extends BaseMethods implements IBaseHandler {
                         .build();
                 groupRepo.save(group);
             }
-            sendMessage(update.getMyChatMember().getFrom().getId(),"<b>Assalomu alaykum</b>\n<i>Siz botni <b>\"%s\"</b> guruhiga qo'shdingiz</i>".formatted(update.getMyChatMember().getChat().getTitle()));
+            sendMessage(update.getMyChatMember().getFrom().getId(), "<b>Assalomu alaykum</b>\n<i>Siz botni <b>\"%s\"</b> guruhiga qo'shdingiz</i>".formatted(update.getMyChatMember().getChat().getTitle()));
         } else if (left(update)) {
             groupRepo.deleteByGroupId(update.getMyChatMember().getChat().getId());
         }

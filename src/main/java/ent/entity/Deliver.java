@@ -1,20 +1,27 @@
 package ent.entity;
 
+import ent.entity.product.Product;
 import lombok.*;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.OneToMany;
-import java.util.List;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@Entity
+@Entity(name = "delivers")
 public class Deliver extends Auditable {
     private String username;
-    @OneToMany(mappedBy = "deliver")
-    private List<Product> products;
-    private int allProductCount;
+    private int productCount;
+    private double percent;
+    private boolean presentInProduct;
+    @ManyToOne
+    @JoinColumn(name = "product_id")
+    private Product product;
+    @Column(name = "col_index")
+    private int colIndex;
 }

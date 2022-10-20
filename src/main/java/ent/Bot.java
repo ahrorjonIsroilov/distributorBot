@@ -5,9 +5,15 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.*;
+import org.telegram.telegrambots.meta.api.objects.Document;
+import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Component
 public class Bot extends TelegramLongPollingBot {
@@ -26,7 +32,7 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "5727850682:AAEcHI5U5C_6AMHpnQS7HGmv4TYe6ivPoC8";
+        return "";
     }
 
     @Override
@@ -40,6 +46,25 @@ public class Bot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    public String download(Document document, LocalDateTime day) {
+        String fileId = document.getFileId();
+        String fileName = document.getFileName();
+        java.io.File directory = new java.io.File("downloads");
+        if (!directory.exists()) directory.mkdir();
+        String path = "downloads" + java.io.File.separator + day.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) + " " + fileName;
+        java.io.File[] files = directory.listFiles();
+        if (files != null)
+            for (java.io.File file : files)
+                if (file.getName().startsWith(day.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")))) file.delete();
+        try {
+            File file = execute(new GetFile(fileId));
+            downloadFile(file, new java.io.File(path));
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+        return path;
     }
 
     public void sendAudio(SendAudio message) {

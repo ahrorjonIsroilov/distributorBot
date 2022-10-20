@@ -1,8 +1,8 @@
 package ent.button;
 
 import ent.entity.Group;
-import ent.entity.Product;
 import ent.entity.auth.AuthUser;
+import ent.entity.product.Product;
 import ent.enums.Role;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -20,8 +20,26 @@ public class InlineBoards {
 
     public InlineKeyboardMarkup addToGroup() {
         InlineKeyboardButton addButton = new InlineKeyboardButton("Guruhga qo'shish ➕");
-        addButton.setUrl("https://t.me/distributorDazaBot?startGroup=true");
+        addButton.setUrl("https://telegram.me/distributorDazaBot?startgroup=true");
         board.setKeyboard(Collections.singletonList(getRow(addButton)));
+        return board;
+    }
+
+    public InlineKeyboardMarkup dayButtons(Role role) {
+        InlineKeyboardButton today = new InlineKeyboardButton();
+        today.setText("Bugun");
+        InlineKeyboardButton home = new InlineKeyboardButton();
+        home.setText("Bosh menyu");
+        home.setCallbackData("home#" + role.getCode());
+        boolean checkRole = role.equals(Role.ADMIN) || role.equals(Role.OWNER);
+        today.setCallbackData(checkRole ? "addT" : "editT");
+        InlineKeyboardButton tomorrow = new InlineKeyboardButton();
+        tomorrow.setText("Ertaga");
+        tomorrow.setCallbackData(checkRole ? "addTw" : "editTw");
+        if (role.equals(Role.DISTRIBUTOR))
+            board.setKeyboard(List.of(getRow(today, tomorrow), getRow(home)));
+        else
+            board.setKeyboard(List.of(getRow(today, tomorrow)));
         return board;
     }
 
@@ -105,13 +123,25 @@ public class InlineBoards {
 
     public InlineKeyboardMarkup productList(List<Product> products, Integer page) {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
+        InlineKeyboardButton home = new InlineKeyboardButton();
+        home.setText("Bosh menyu");
+        home.setCallbackData("home#" + "storekeeper");
         for (Product product : products) {
             InlineKeyboardButton btn = new InlineKeyboardButton();
-            btn.setText(product.getName());
-            btn.setCallbackData("product." + product.getId());
+            btn.setText(product.getName() + " - " + Math.round((long) product.getTotalCount()));
+            btn.setCallbackData("product#" + product.getId());
             buttons.add(btn);
         }
-        board.setKeyboard(prepareButtons(buttons, ".product", page));
+        List<List<InlineKeyboardButton>> lists = prepareButtons(buttons, ".product", page);
+        lists.add(getRow(home));
+        board.setKeyboard(lists);
+        return board;
+    }
+
+    public InlineKeyboardMarkup storeKeeperPanel() {
+        InlineKeyboardButton doChange = new InlineKeyboardButton("O'zgarish bor ⁉️");
+        doChange.setCallbackData("dochange");
+        board.setKeyboard(List.of(getRow(doChange)));
         return board;
     }
 
@@ -128,7 +158,7 @@ public class InlineBoards {
         else if (userPage < 1) buttons.add(nextX(mark));
         else buttons.add(prevXNext(mark));
         if (mark.equals(".gr"))
-            buttons.add(getRow(fixedButton("Yangi guruhga qo'shish", "https://t.me/distributorDazaBot?startGroup=true")));
+            buttons.add(getRow(fixedButton("Yangi guruhga qo'shish", "https://telegram.me/distributorDazaBot?startgroup=true")));
         return buttons;
     }
 
@@ -177,5 +207,14 @@ public class InlineBoards {
                 first + " " +
                 second + " " +
                 third;
+    }
+
+    public InlineKeyboardMarkup acceptOrContinue() {
+        InlineKeyboardButton continueB = new InlineKeyboardButton("Davom etish 🔄");
+        continueB.setCallbackData("continue");
+        InlineKeyboardButton acceptB = new InlineKeyboardButton("Tayyor ✅");
+        acceptB.setCallbackData("ready");
+        board.setKeyboard(List.of(getRow(continueB, acceptB)));
+        return board;
     }
 }

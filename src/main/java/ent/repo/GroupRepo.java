@@ -21,4 +21,6 @@ public interface GroupRepo extends JpaRepository<Group, Long> {
     boolean existsByGroupId(Long groupId);
 
     List<Group> findAllBy(Pageable pageable);
+
+    List<Group> getAllByAccepted(Boolean accepted);
 }

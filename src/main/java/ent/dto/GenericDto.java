@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class GenericDto implements Dto{
+public class GenericDto implements Dto {
 
     private Long id;
 
