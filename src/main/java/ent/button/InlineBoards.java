@@ -128,7 +128,7 @@ public class InlineBoards {
         home.setCallbackData("home#" + "storekeeper");
         for (Product product : products) {
             InlineKeyboardButton btn = new InlineKeyboardButton();
-            btn.setText(product.getName() + " - " + Math.round((long) product.getTotalCount()));
+            btn.setText(Math.round((long) product.getTotalCount()) + " | " + product.getName());
             btn.setCallbackData("product#" + product.getId());
             buttons.add(btn);
         }

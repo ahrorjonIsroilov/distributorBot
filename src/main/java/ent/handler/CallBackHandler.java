@@ -206,8 +206,6 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
                         if (product.getTotalCount() < makroCount)
                             makroCount = (int) product.getTotalCount();
                     }
-                }
-                for (Deliver deliver : delivers) {
                     deliver.setPercent((deliver.getPercent()) + (makroPercent / delivers.size()));
                 }
                 changes.append("\n<b>- ").append(product.getName().toUpperCase()).append(", ").append("jami - ").append((int) product.getTotalCount()).append("ta, jumladan:</b>\n");
