@@ -3,6 +3,7 @@ package ent.entity.product;
 import ent.entity.Auditable;
 import ent.entity.Deliver;
 import ent.entity.Template;
+import ent.enums.Exclusions;
 import lombok.*;
 
 import javax.persistence.*;
@@ -29,6 +30,23 @@ public class Product extends Auditable {
     private List<Deliver> delivers = new ArrayList<>();
     @Column(name = "row_index")
     private int rowIndex;
+
+    public List<Deliver> deliversWithoutExclusions() {
+        List<Deliver> result = new ArrayList<>();
+        for (Deliver deliver : this.delivers)
+            if (!deliver.getUsername().equalsIgnoreCase(Exclusions.NAMANGAN.getVal()) && !deliver.getUsername().equalsIgnoreCase(Exclusions.MAKRO.getVal()))
+                result.add(deliver);
+        return result;
+    }
+
+    public List<Deliver> exclusionDelivers() {
+        List<Deliver> result = new ArrayList<>();
+        for (Deliver deliver : this.delivers)
+            for (Exclusions value : Exclusions.values())
+                if (deliver.getUsername().equalsIgnoreCase(value.getVal()))
+                    result.add(deliver);
+        return result;
+    }
 
 
 }

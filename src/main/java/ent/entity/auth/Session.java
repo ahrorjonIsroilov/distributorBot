@@ -81,11 +81,11 @@ public class Session {
 
     public Optional<SessionUser> prepare(AuthUser user) {
         return Optional.of(SessionUser.builder()
-                .state(State.DEFAULT)
-                .blocked(user.getBlocked())
-                .chatId(user.getChatId())
-                .page(user.getPage())
-                .role(user.getRole()).build());
+            .state(State.DEFAULT)
+            .blocked(user.getBlocked())
+            .chatId(user.getChatId())
+            .page(user.getPage())
+            .role(user.getRole()).build());
     }
 
     public Boolean isBlocked(Long chatId) {
@@ -132,6 +132,20 @@ public class Session {
             session.get().setTempString(tempVal);
             setSession(chatId, session);
         }
+    }
+
+    public void setExclusionName(String exclusionName, Long chatId) {
+        Optional<SessionUser> session = findByChatId(chatId);
+        if (session.isPresent()) {
+            session.get().setExclusion(exclusionName);
+            setSession(chatId, session);
+        }
+    }
+
+    public String getExclusionName(Long chatId) {
+        Optional<SessionUser> session = findByChatId(chatId);
+        if (session.isPresent()) return session.get().getExclusion();
+        return "";
     }
 
     public String getTempString(Long chatId) {

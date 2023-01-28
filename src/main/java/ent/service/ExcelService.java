@@ -173,6 +173,7 @@ public class ExcelService {
                     overall.setCellValue(product.getTotalCount());
                 }
             }
+            product.setEdited(false);
         }
         sheet.removeRow(sheet.getRow(sheet.getLastRowNum()));
         File directory = new File("changes");

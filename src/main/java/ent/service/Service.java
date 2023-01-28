@@ -149,10 +149,6 @@ public class Service implements BaseService {
         return productRepo.getAllByDay(day.format(DateTimeFormatter.ofPattern("dd-MM-yyy")), PageRequest.of(page, 10, Sort.by("count").descending()));
     }
 
-    public List<Deliver> getAllDelivers() {
-        return deliverRepo.getAllByDeleted(false);
-    }
-
     public Group findGroupByGroupId(Long groupId) {
         return groupRepo.findByGroupId(groupId);
     }
@@ -235,10 +231,26 @@ public class Service implements BaseService {
     public boolean editProduct(String id, Integer count) {
         Product byId = productRepo.getById(Long.parseLong(id));
         if (byId.getTotalCount() < count) return false;
-        byId.setNewCount(count);
         byId.setCount(count);
+        byId.setNewCount(count);
         byId.setTotalCount(count);
         byId.setEdited(true);
+        productRepo.save(byId);
+        return true;
+    }
+
+    public boolean editProductForExclusion(String id, Integer count, String exclusionName) {
+        Product byId = productRepo.getById(Long.parseLong(id));
+        if (byId.getTotalCount() < count) return false;
+        List<Deliver> delivers = byId.getDelivers();
+        for (Deliver deliver : delivers) {
+            if (deliver.getUsername().equals(exclusionName)) {
+                if (deliver.isPresentInProduct()) {
+                    deliver.setProductCount(count);
+                    byId.setEdited(true);
+                }
+            }
+        }
         productRepo.save(byId);
         return true;
     }
@@ -257,5 +269,9 @@ public class Service implements BaseService {
 
     public Template getTemplateByDay(String day) {
         return templateRepo.findFirstByDate(day);
+    }
+
+    public List<Product> getAllProductsByDeliver(String exclusionName, LocalDateTime day, Integer page) {
+        return productRepo.getAllByDayAndDeliversIn(day.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")), List.of(Deliver.builder().username(exclusionName).build()), PageRequest.of(page, 10));
     }
 }

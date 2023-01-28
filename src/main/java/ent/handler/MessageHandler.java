@@ -80,6 +80,7 @@ public class MessageHandler extends BaseMethods implements IBaseHandler {
                 switch (state) {
                     case UPLOAD_FORM -> uploadForm(update);
                     case EDIT_PRODUCT -> editProduct(update);
+                    case EDIT_PRODUCT_FOR_EXCLUSION -> editProductForExclusion(update);
                     case LOAD_HISTORY -> loadFileFromDate(update);
                     case ADD_DIS -> addDistributor(update);
                     case ADD_ADMIN -> addAdmin(update);
@@ -173,15 +174,30 @@ public class MessageHandler extends BaseMethods implements IBaseHandler {
                     return;
                 }
                 Product product = service.getProduct(id);
-                if (product.getTotalCount() == count) {
+                if (product.getTotalCount() == count || service.editProduct(id, count)) {
                     sessions.setState(State.DEFAULT, chatId);
                     List<Product> productList = service.getAllProducts(sessions.getDay(chatId), sessions.getPage(chatId));
                     sendMessage(chatId, "<b>Mahsulotlar</b>", inline.productList(productList, sessions.getPage(chatId)));
+                } else sendMessage(chatId, "<i>Yangi miqdor eskisidan ko'p bo'lmasligi kerak</i>");
+            } else sendMessage(chatId, "<i>To'g'ri qiymat kiriting!</i>");
+        }
+    }
+
+    private void editProductForExclusion(Update update) {
+        if (messageHasText(update)) {
+            String newCount = message.getText();
+            if (validNumber(newCount)) {
+                int count = Integer.parseInt(newCount);
+                String id = sessions.getTempString(chatId);
+                if (count < 0) {
+                    sendMessage(chatId, "Kiritiladigan miqdor 0 dan kichik bo'lmasligi kerak");
                     return;
                 }
-                if (service.editProduct(id, count)) {
-                    sendMessage(chatId, "<b>O'zgarishlar saqlandi!</b> \n<i>Hammasi tayyor bo'lsa</i> <b>[Tayyor ✅]</b><i> tugmasini bosing</i>", inline.acceptOrContinue());
+                Product product = service.getProduct(id);
+                if (product.getTotalCount() == count || service.editProductForExclusion(id, count, sessions.getExclusionName(chatId))) {
                     sessions.setState(State.DEFAULT, chatId);
+                    List<Product> productList = service.getAllProducts(sessions.getDay(chatId), sessions.getPage(chatId));
+                    sendMessage(chatId, "<b>%s</b> do'kon uchun o'zgarishlar".formatted(sessions.getExclusionName(chatId)), inline.productListForExclusion(sessions.getExclusionName(chatId), productList, sessions.getPage(chatId)));
                 } else sendMessage(chatId, "<i>Yangi miqdor eskisidan ko'p bo'lmasligi kerak</i>");
             } else sendMessage(chatId, "<i>To'g'ri qiymat kiriting!</i>");
         }
@@ -290,7 +306,8 @@ public class MessageHandler extends BaseMethods implements IBaseHandler {
 
     private void loadForm() {
         switch (sessions.getRole(chatId)) {
-            case ADMIN, OWNER -> sendMessage(chatId, "<b>Qaysi kun uchun yuklaysiz</b>", inline.dayButtons(sessions.getRole(chatId)));
+            case ADMIN, OWNER ->
+                sendMessage(chatId, "<b>Qaysi kun uchun yuklaysiz</b>", inline.dayButtons(sessions.getRole(chatId)));
             default -> {
             }
         }
@@ -326,14 +343,14 @@ public class MessageHandler extends BaseMethods implements IBaseHandler {
             username = username.startsWith("@") ? username.substring(1) : username;
             if (!service.existsByUsername(username)) {
                 AuthUser distributor = AuthUser.builder()
-                        .blocked(false)
-                        .registered(false)
-                        .phoneNumber("NONE")
-                        .state(State.DEFAULT)
-                        .page(0)
-                        .role(role)
-                        .username(username)
-                        .build();
+                    .blocked(false)
+                    .registered(false)
+                    .phoneNumber("NONE")
+                    .state(State.DEFAULT)
+                    .page(0)
+                    .role(role)
+                    .username(username)
+                    .build();
                 service.save(distributor);
                 sessions.setState(State.DEFAULT, chatId);
                 sendMessage(chatId, roleName + " qo'shildi!", markup.adminPanel());

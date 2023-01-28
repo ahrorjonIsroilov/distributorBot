@@ -26,9 +26,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -38,11 +37,11 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
     private final Service service;
     private final ExcelService excelService;
 
-    public CallBackHandler(Bot bot, MarkupBoards markup, InlineBoards inline, Session sessions, Service service, ExcelService excelService, ExcelService excelService1) {
+    public CallBackHandler(Bot bot, MarkupBoards markup, InlineBoards inline, Session sessions, Service service, ExcelService excelService) {
         super(bot, markup, inline);
         this.sessions = sessions;
         this.service = service;
-        this.excelService = excelService1;
+        this.excelService = excelService;
     }
 
     @SneakyThrows
@@ -61,15 +60,15 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
                     return;
                 }
                 case "addTw" -> {
-                    addForSpecificDay(LocalDateTime.now().plus(1, ChronoUnit.DAYS));
+                    addForSpecificDay(LocalDateTime.now().plusDays(1));
                     return;
                 }
                 case "editT" -> {
-                    editSpecificDay(LocalDateTime.now(), update);
+                    showExclusions(LocalDateTime.now(), update);
                     return;
                 }
                 case "editTw" -> {
-                    editSpecificDay(LocalDateTime.now().plusDays(1), update);
+                    showExclusions(LocalDateTime.now().plusDays(1), update);
                     return;
                 }
                 case "continue" -> {
@@ -94,6 +93,15 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
                     addUser(State.ADD_ADMIN);
                     return;
                 }
+                case "continue-exclusions" -> {
+                    showExclusionProducts(sessions.getExclusionName(chatId), update);
+                }
+                case "back-to-exclusion" -> {
+                    showExclusions(sessions.getDay(chatId), update);
+                }
+                case "ready-to-others" -> {
+                    editSpecificDay(sessions.getDay(chatId), update);
+                }
             }
             if (data.startsWith("home")) {
                 String role = data.split("#")[1];
@@ -102,13 +110,19 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
                 else sendMessage(chatId, "<b>Assalomu alaykum</b>", markup.adminPanel());
 
             }
+            if (data.startsWith("exclusion")) {
+                String exclusionName = data.split("#")[1];
+                sessions.setExclusionName(exclusionName, chatId);
+                showExclusionProducts(exclusionName, update);
+            }
             if (data.startsWith("next")) {
                 sessions.nextPage(chatId);
-                controlPages(update, data);
+                controlPages(update, data, sessions.getExclusionName(chatId));
             } else if (data.startsWith("previous")) {
                 sessions.previousPage(chatId);
-                controlPages(update, data);
+                controlPages(update, data, sessions.getExclusionName(chatId));
             } else if (data.startsWith("product")) showProductInfo(data, update);
+            else if (data.startsWith("prod-exclusion")) showProductInfoForExclusion(data, update);
             else if (data.startsWith("group")) showGroupInfo(update, data);
             else if (data.startsWith("user")) {
                 String userId = data.split("#")[1];
@@ -164,7 +178,26 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
                 bot.executeMessage(new DeleteMessage(chatId.toString(), message.getMessageId()));
             } else if (data.equals("close"))
                 bot.executeMessage(new DeleteMessage(chatId.toString(), message.getMessageId()));
-        } else sendMessage(chatId, "Bloklangansiz!", new ReplyKeyboardRemove(true));
+        } else
+            sendMessage(chatId, "Bloklangansiz!", new ReplyKeyboardRemove(true));
+    }
+
+    private void showExclusionProducts(String exclusionName, Update update) {
+        sessions.setPageZero(chatId);
+        List<Product> products = service.getAllProducts(sessions.getDay(chatId), sessions.getPage(chatId));
+        bot.executeMessage(eMsgObject(update, inline.productListForExclusion(exclusionName, products, sessions.getPage(chatId)), "<b>%s</b> do'kon uchun o'zgarishlar".formatted(exclusionName)));
+    }
+
+    private void showExclusions(LocalDateTime now, Update update) {
+        sessions.setPageZero(chatId);
+        List<Product> productList = service.getAllProducts(now, sessions.getPage(chatId));
+        if (productList.isEmpty()) {
+            bot.executeMessage(popupMessage("%s sana uchun mahsulotlar ro'yxati kiritilmagan".formatted(now.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))), callbackQuery.getId()));
+            return;
+        }
+        sessions.setState(State.DEFAULT, chatId);
+        sessions.setDate(now, chatId);
+        bot.executeMessage(eMsgObject(update, inline.showExclusions(), "Quyidagi do'konlar uchun o'zgarish bo'lmasa davom etish tugmasini bosing"));
     }
 
     private void sendFile(List<Group> groups, String path) {
@@ -191,80 +224,52 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
     }
 
     private String acceptChanges(SessionUser user) {
-        int makroCount = 0;
-        double makroPercent = 0D;
         StringBuilder changes = new StringBuilder("<b>" + user.getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyy")) + " kun uchun TAQSIMOT bor:</b>\n");
         List<Product> products = service.getAllProductsByDay(user.getDate());
         for (Product product : products) {
             if (product.isEdited()) {
-                product.setTotalCount(product.getNewCount());
-                List<Deliver> delivers = product.getDelivers();
-                for (Deliver deliver : delivers) {
-                    if (deliver.getUsername().toUpperCase(Locale.ROOT).startsWith("MAKRO")) {
-                        makroCount = deliver.getProductCount();
-                        makroPercent = deliver.getPercent();
-                        if (product.getTotalCount() < makroCount)
-                            makroCount = (int) product.getTotalCount();
-                    }
-                    deliver.setPercent((deliver.getPercent()) + (makroPercent / delivers.size()));
-                }
+                product.setTotalCount(product.getCount());
+                product.setNewCount(product.getCount());
+                List<Deliver> delivers = product.deliversWithoutExclusions();
+                List<Deliver> productDelivers = product.getDelivers();
+                List<Deliver> exclusionDelivers = product.exclusionDelivers();
                 changes.append("\n<b>- ").append(product.getName().toUpperCase()).append(", ").append("jami - ").append((int) product.getTotalCount()).append("ta, jumladan:</b>\n");
-                setProductAsProportional(changes, product, delivers, makroCount);
+                setProductAsProportional(changes, product, productDelivers, delivers, exclusionDelivers);
             }
         }
         service.saveAllProduct(products);
         return changes.toString();
     }
 
-    private void setProductAsProportional(StringBuilder changes, Product product, List<Deliver> delivers, int makroCount) {
-        int totalCount = (int) product.getTotalCount() - makroCount;
+    private void setProductAsProportional(StringBuilder changes, Product product, List<Deliver> productDelivers, List<Deliver> deliversWithoutExclusions, List<Deliver> exclusionDelivers) {
+        int totalCount = (int) product.getTotalCount();
+        for (Deliver deliver : exclusionDelivers) totalCount -= deliver.getProductCount();
         int totalInDelivers = 0;
-        if (makroCount == product.getTotalCount()) {
-            for (Deliver deliver : delivers) {
-                if (deliver.getUsername().toUpperCase(Locale.ROOT).startsWith("MAKRO")) {
-                    deliver.setProductCount(makroCount);
-                } else deliver.setProductCount(0);
-            }
-            for (Deliver deliver : delivers) {
-                if (deliver.isPresentInProduct())
-                    changes.append("<i> ").append(deliver.getUsername()).append(" - ").append(deliver.getProductCount()).append("</i>\n");
-            }
-            return;
-        }
-        for (Deliver deliver : delivers) {
+        for (Deliver deliver : deliversWithoutExclusions) {
             if (deliver.isPresentInProduct()) {
-                /* makro supermarket uchun alohida qism shart */
-                if (!deliver.getUsername().toUpperCase(Locale.ROOT).startsWith("MAKRO")) {
-                    deliver.setProductCount((int) Math.round((product.getNewCount() - makroCount) * (deliver.getPercent())));
-                    totalInDelivers += deliver.getProductCount();
-                }
+                deliver.setProductCount((int) Math.round(product.getNewCount() * deliver.getPercent()));
+                totalInDelivers += deliver.getProductCount();
             }
         }
         if (totalCount < totalInDelivers) {
-            for (Deliver deliver : delivers) {
-                while (totalCount != totalInDelivers)
-                    if (deliver.isPresentInProduct()) {
-                        if (!deliver.getUsername().toUpperCase(Locale.ROOT).startsWith("MAKRO")) {
-                            deliver.setProductCount(deliver.getProductCount() - 1);
-                            totalInDelivers--;
-                        }
-                    }
-                break;
+            while (totalCount != totalInDelivers) for (Deliver deliver : deliversWithoutExclusions) {
+                if (deliver.isPresentInProduct()) {
+                    deliver.setProductCount(deliver.getProductCount() - 1);
+                    totalInDelivers--;
+                    if (totalCount == totalInDelivers) break;
+                }
             }
         }
         if (totalCount > totalInDelivers) {
-            while (totalCount != totalInDelivers)
-                for (Deliver deliver : delivers) {
-                    if (deliver.isPresentInProduct()) {
-                        if (!deliver.getUsername().toUpperCase(Locale.ROOT).startsWith("MAKRO")) {
-                            deliver.setProductCount(deliver.getProductCount() + 1);
-                            totalInDelivers++;
-                        }
-                    }
+            while (totalCount != totalInDelivers) for (Deliver deliver : deliversWithoutExclusions) {
+                if (deliver.isPresentInProduct()) {
+                    deliver.setProductCount(deliver.getProductCount() + 1);
+                    totalInDelivers++;
                     if (totalCount == totalInDelivers) break;
                 }
+            }
         }
-        for (Deliver deliver : delivers) {
+        for (Deliver deliver : productDelivers) {
             if (deliver.isPresentInProduct())
                 changes.append("<i> ").append(deliver.getUsername()).append(" - ").append(deliver.getProductCount()).append("</i>\n");
         }
@@ -282,16 +287,26 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
         sessions.setState(State.EDIT_PRODUCT, chatId);
         Product t = service.getProduct(id);
         bot.executeMessage(eMsgObject(update, "<b>Yangi miqdorni kiriting:\n\nMahsulot: <code>%s</code>\nSana: <code>%s</code>\nEski miqdor: <code>%s ta</code></b>"
-                .formatted(t.getName(),
-                        t.getDay(),
-                        (int) t.getCount())));
+            .formatted(t.getName(),
+                t.getDay(),
+                (int) t.getCount())));
+    }
+
+    private void showProductInfoForExclusion(String data, Update update) {
+        String id = data.split("#")[1];
+        sessions.setTempVal(id, chatId);
+        sessions.setState(State.EDIT_PRODUCT_FOR_EXCLUSION, chatId);
+        Product product = service.getProduct(id);
+        Deliver d = product.exclusionDelivers().stream().filter(deliver -> deliver.getUsername().equalsIgnoreCase(sessions.getExclusionName(chatId))).findFirst().orElse(null);
+        bot.executeMessage(eMsgObject(update, "<b>%s do'kon uchun yangi miqdorni kiriting:\n\nMahsulot: <code>%s</code>\nSana: <code>%s</code>\nEski miqdor: <code>%s ta</code></b>"
+            .formatted(sessions.getExclusionName(chatId), product.getName(),
+                product.getDay(),
+                d.getProductCount())));
     }
 
     private void changeProduct(Update update) {
-        switch (sessions.getRole(chatId)) {
-            case DISTRIBUTOR -> bot.executeMessage(eMsgObject(update, inline.dayButtons(sessions.getRole(chatId)), "<b>Sanani tanlang</b>"));
-            default -> {
-            }
+        if (Objects.requireNonNull(sessions.getRole(chatId)) == Role.DISTRIBUTOR) {
+            bot.executeMessage(eMsgObject(update, inline.dayButtons(sessions.getRole(chatId)), "<b>Sanani tanlang</b>"));
         }
     }
 
@@ -318,19 +333,21 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
         sessions.setPageZero(chatId);
         List<Product> productList = service.getAllProducts(sessions.getDay(chatId), sessions.getPage(chatId));
         if (productList.isEmpty()) {
-            bot.executeMessage(eMsgObject(update, inline.dayButtons(Role.DISTRIBUTOR), "<i>%s sana uchun mahsulotlar ro'yxati kiritilmagan</i>".formatted(day)));
+            bot.executeMessage(popupMessage("<i>%s sana uchun mahsulotlar ro'yxati kiritilmagan</i>".formatted(day), callbackQuery.getId()));
             return;
         }
         bot.executeMessage(eMsgObject(update, inline.productList(productList, sessions.getPage(chatId)), "<b>Mahsulotlar</b>"));
     }
 
-    private void controlPages(Update update, String data) {
+    private void controlPages(Update update, String data, String exclusionName) {
         if (data.endsWith("dis"))
             bot.executeMessage(eMsgObject(update, inline.userList(service.getAllDistributors(sessions.getPage(chatId)), sessions.getPage(chatId), Role.DISTRIBUTOR)));
         else if (data.endsWith("gr"))
             bot.executeMessage(eMsgObject(update, inline.groupList(service.getGroups(sessions.getPage(chatId)), sessions.getPage(chatId))));
         else if (data.endsWith("product")) {
             bot.executeMessage(eMsgObject(update, inline.productList(service.getAllProducts(sessions.getDay(chatId), sessions.getPage(chatId)), sessions.getPage(chatId))));
+        } else if (data.endsWith("prod-exclusion")) {
+            bot.executeMessage(eMsgObject(update, inline.productListForExclusion(sessions.getExclusionName(chatId), service.getAllProducts(sessions.getDay(chatId), sessions.getPage(chatId)), sessions.getPage(chatId))));
         } else if (data.endsWith("admin"))
             bot.executeMessage(eMsgObject(update, inline.userList(service.getAllAdmins(sessions.getPage(chatId)), sessions.getPage(chatId), Role.ADMIN)));
     }
@@ -340,12 +357,12 @@ public class CallBackHandler extends BaseMethods implements IBaseHandler {
         String s;
         if (user.getRegistered()) {
             s = "<b>👮🏻 Username: </b><code>" + user.getUsername() + "</code>\n" +
-                    "<b>🛡 Maqom: </b><code>" + user.getRole() + "</code>\n" +
-                    "<b>ℹ️ Holat: </b><code>" + status + "</code>";
+                "<b>🛡 Maqom: </b><code>" + user.getRole() + "</code>\n" +
+                "<b>ℹ️ Holat: </b><code>" + status + "</code>";
         } else {
             s = "<b>👮🏻 Username: </b><code>" + user.getUsername() + "</code>\n" +
-                    "<b>🛡 Maqom: </b><code>" + user.getRole() + "</code>\n" +
-                    "<b>ℹ️ Holat: </b><code>" + "unregistered" + "</code>";
+                "<b>🛡 Maqom: </b><code>" + user.getRole() + "</code>\n" +
+                "<b>ℹ️ Holat: </b><code>" + "unregistered" + "</code>";
         }
         return s;
     }

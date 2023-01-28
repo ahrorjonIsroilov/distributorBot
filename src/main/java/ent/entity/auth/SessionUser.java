@@ -18,6 +18,7 @@ public class SessionUser {
     private State state;
     private Integer page;
     private String tempString;
+    private String exclusion;
     private LocalDateTime date;
     private Long tempLong;
 }

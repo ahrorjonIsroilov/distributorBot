@@ -6,6 +6,7 @@ import ent.button.InlineBoards;
 import ent.button.MarkupBoards;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -13,6 +14,7 @@ import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
 import java.util.List;
@@ -89,6 +91,18 @@ public class BaseMethods {
         ed.enableHtml(true);
         ed.setReplyMarkup(markup);
         return ed;
+    }
+
+    public AnswerCallbackQuery popupMessage(String text, String callbackQueryId) {
+        AnswerCallbackQuery query = new AnswerCallbackQuery();
+        query.setText(text);
+        query.setCallbackQueryId(callbackQueryId);
+        try {
+            bot.execute(query);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+        return query;
     }
 
     public EditMessageText eMsgObject(Update update, String text) {
@@ -171,8 +185,8 @@ public class BaseMethods {
         String second = phoneNumber.substring(8, 10);
         String third = phoneNumber.substring(10);
         return "(" + countryCode + ")" +
-                first + " " +
-                second + " " +
-                third;
+            first + " " +
+            second + " " +
+            third;
     }
 }

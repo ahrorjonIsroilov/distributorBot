@@ -1,8 +1,10 @@
 package ent.button;
 
+import ent.entity.Deliver;
 import ent.entity.Group;
 import ent.entity.auth.AuthUser;
 import ent.entity.product.Product;
+import ent.enums.Exclusions;
 import ent.enums.Role;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -123,9 +125,8 @@ public class InlineBoards {
 
     public InlineKeyboardMarkup productList(List<Product> products, Integer page) {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
-        InlineKeyboardButton home = new InlineKeyboardButton();
-        home.setText("Bosh menyu");
-        home.setCallbackData("home#" + "storekeeper");
+        InlineKeyboardButton ready = new InlineKeyboardButton("Tayyor ✅");
+        ready.setCallbackData("ready");
         for (Product product : products) {
             InlineKeyboardButton btn = new InlineKeyboardButton();
             btn.setText(Math.round((long) product.getTotalCount()) + " | " + product.getName());
@@ -133,7 +134,29 @@ public class InlineBoards {
             buttons.add(btn);
         }
         List<List<InlineKeyboardButton>> lists = prepareButtons(buttons, ".product", page);
-        lists.add(getRow(home));
+        lists.add(getRow(ready));
+        board.setKeyboard(lists);
+        return board;
+    }
+
+    public InlineKeyboardMarkup productListForExclusion(String exclusionName, List<Product> products, Integer page) {
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
+        InlineKeyboardButton home = new InlineKeyboardButton();
+        home.setText("Bosh menyu");
+
+        InlineKeyboardButton ready = new InlineKeyboardButton("Tayyor ✅");
+        ready.setCallbackData("ready");
+        for (Product product : products) {
+            for (Deliver deliver : product.getDelivers()) {
+                if (deliver.getUsername().equalsIgnoreCase(exclusionName)) {
+                    InlineKeyboardButton btn = new InlineKeyboardButton();
+                    btn.setText(Math.round((long) product.getTotalCount()) + "-" + Math.round((long) deliver.getProductCount()) + " | " + product.getName());
+                    btn.setCallbackData("prod-exclusion#" + product.getId());
+                    buttons.add(btn);
+                }
+            }
+        }
+        List<List<InlineKeyboardButton>> lists = prepareButtons(buttons, ".prod-exclusion", page);
         board.setKeyboard(lists);
         return board;
     }
@@ -163,19 +186,21 @@ public class InlineBoards {
     }
 
     public List<InlineKeyboardButton> prevX(String mark) {
+        InlineKeyboardButton backToExclusion = new InlineKeyboardButton("Tayyor ✅");
+        backToExclusion.setCallbackData("back-to-exclusion");
         InlineKeyboardButton previous = new InlineKeyboardButton("⬅️");
         previous.setCallbackData("previous" + mark);
-        InlineKeyboardButton close = new InlineKeyboardButton("✖️");
-        close.setCallbackData("close");
-        return new ArrayList<>(getRow(previous, close));
+        if (mark.equals(".prod-exclusion")) return new ArrayList<>(getRow(previous));
+        return new ArrayList<>(getRow(previous, home()));
     }
 
     public List<InlineKeyboardButton> nextX(String mark) {
+        InlineKeyboardButton backToExclusion = new InlineKeyboardButton("Tayyor ✅");
+        backToExclusion.setCallbackData("back-to-exclusion");
         InlineKeyboardButton next = new InlineKeyboardButton("➡️");
         next.setCallbackData("next" + mark);
-        InlineKeyboardButton close = new InlineKeyboardButton("✖️");
-        close.setCallbackData("close");
-        return new ArrayList<>(getRow(close, next));
+        if (mark.equals(".prod-exclusion")) return new ArrayList<>(getRow(backToExclusion, next));
+        return new ArrayList<>(getRow(home(), next));
     }
 
     public InlineKeyboardButton close() {
@@ -184,37 +209,38 @@ public class InlineBoards {
         return close;
     }
 
+    public InlineKeyboardButton home() {
+        InlineKeyboardButton home = new InlineKeyboardButton();
+        home.setText("Bosh menyu 🏡");
+        home.setCallbackData("home#" + "storekeeper");
+        return home;
+    }
+
     public List<InlineKeyboardButton> prevXNext(String mark) {
+        InlineKeyboardButton backToExclusion = new InlineKeyboardButton("Tayyor ✅");
+        backToExclusion.setCallbackData("back-to-exclusion");
         InlineKeyboardButton previous = new InlineKeyboardButton("⬅️");
         previous.setCallbackData("previous" + mark);
-        InlineKeyboardButton close = new InlineKeyboardButton("✖️");
-        close.setCallbackData("close");
         InlineKeyboardButton next = new InlineKeyboardButton("➡️");
         next.setCallbackData("next" + mark);
-        return new ArrayList<>(getRow(previous, close, next));
+        if (mark.equals(".prod-exclusion")) return new ArrayList<>(getRow(previous, next));
+        return new ArrayList<>(getRow(previous, home(), next));
     }
 
     private List<InlineKeyboardButton> getRow(InlineKeyboardButton... buttons) {
         return Arrays.stream(buttons).collect(Collectors.toList());
     }
 
-    public String beautyPhone(String phoneNumber) {
-        String countryCode = phoneNumber.substring(3, 5);
-        String first = phoneNumber.substring(5, 8);
-        String second = phoneNumber.substring(8, 10);
-        String third = phoneNumber.substring(10);
-        return "(" + countryCode + ")" +
-                first + " " +
-                second + " " +
-                third;
-    }
-
-    public InlineKeyboardMarkup acceptOrContinue() {
-        InlineKeyboardButton continueB = new InlineKeyboardButton("Davom etish 🔄");
-        continueB.setCallbackData("continue");
-        InlineKeyboardButton acceptB = new InlineKeyboardButton("Tayyor ✅");
-        acceptB.setCallbackData("ready");
-        board.setKeyboard(List.of(getRow(continueB, acceptB)));
+    public InlineKeyboardMarkup showExclusions() {
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
+        InlineKeyboardButton continueB = new InlineKeyboardButton("Davom etish ✅");
+        continueB.setCallbackData("ready-to-others");
+        for (Exclusions exclusion : Exclusions.values()) {
+            InlineKeyboardButton exButton = new InlineKeyboardButton(exclusion.getVal());
+            exButton.setCallbackData("exclusion#" + exclusion.getVal());
+            buttons.add(exButton);
+        }
+        board.setKeyboard(List.of(buttons, getRow(continueB)));
         return board;
     }
 }
